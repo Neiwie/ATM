@@ -1,13 +1,13 @@
-import { User } from "./User.js";
+import { users } from "./User.js";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { json } from "node:stream/consumers";
 import fs from "fs";
 
 
-const user1 = new User(22334, "Michael", 1234, 2500);
-const user2 = new User(1, "Steven", 1234, 3000);
-const userList = [user1, user2]
+// const user1 = new User(22334, "Michael", 1234, 2500);
+//const user2 = new User(1, "Steven", 1234, 3000);
+//const userList = [user1, user2]
 
 async function UseATM(user, rl) {
     const cInput = await rl.question("Choose: withdraw, deposite, exit: ");
@@ -28,7 +28,7 @@ async function UseATM(user, rl) {
         }
 
 async function withdraw(user, rl){
-    const amount = await rl.question("How much do you want to withdraw (max. " + user.balance + "$): ")
+    const amount = Number( await rl.question("How much do you want to withdraw (max. " + user.balance + "$): "));
     while (amount > user.balance || amount < 1  || amount > atmBalance()){
         console.log("Not possible!");
         return withdraw(user, rl);
@@ -58,27 +58,26 @@ async function exit(user){
     main(user);
 }
         
-async function login(user, rl) {
-    const userIdInput = await rl.question("Please enter ID: ");
-        for(user of userList) {
+async function login(rl) {
+    const userIdInput = Number(await rl.question("Please enter ID: "));
+    const user = users.find(user => user.id === userIdInput);    
             if(userIdInput == user.id){
                 let i = 3;
                 while(i>0){
-                    const userPinInput = await rl.question("Enter your PIN ... ");
+                    const userPinInput = Number(await rl.question("Enter your PIN ... "));
                     if(user.pin == userPinInput){
                         return user;
                     }else 
                         i--;
                         console.log("Wrong Pin! You have " + i + " tries left.")
                 }
-            }
+            }else
+                console.log("Wrong ID or Pin!") 
+                await login(rl); 
+                return user;          
 
         }
-        console.log("Wrong ID or Pin!") 
-        await login(user, rl); 
-        return user;          
-}
-
+        
 function atmBalance(){
     const JsonData = JSON.parse(fs.readFileSync("./ATM.json", "utf-8"));
     return JsonData.balance;
@@ -87,7 +86,7 @@ function atmBalance(){
 async function main(user) {
     const rl = readline.createInterface({ input, output });
     console.log("Welcome");
-    user = await login(user, rl);
+    user = await login(rl);
     console.log("Hello, " + user.name + ".");
     console.log("Your balance is: " + user.balance + "$");
 
