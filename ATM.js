@@ -1,13 +1,9 @@
 import { users } from "./User.js";
+import { User } from "./User.js";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { json } from "node:stream/consumers";
 import fs from "fs";
 
-
-// const user1 = new User(22334, "Michael", 1234, 2500);
-//const user2 = new User(1, "Steven", 1234, 3000);
-//const userList = [user1, user2]
 
 async function UseATM(user, rl) {
     const cInput = await rl.question("Choose: withdraw, deposite, exit: ");
@@ -19,7 +15,7 @@ async function UseATM(user, rl) {
             deposite(user, rl);
             break;
         case "exit": 
-            exit(user);
+            exit(user, rl);
             break;
         default: 
             console.log("This is not an option!");
@@ -41,7 +37,7 @@ async function withdraw(user, rl){
 
 async function deposite(user, rl){
     const amount = Number(await rl.question("How much do you want to deposite(max. 2000$): "))
-    while (amount >= 2000 || amount <= 1){
+    while (amount >= 2000 || amount <= 1 || amount > atmBalance()){
         console.log("Not possible!");
         return deposite(user, rl);
     }
@@ -51,33 +47,68 @@ async function deposite(user, rl){
     UseATM(user, rl);
 }
 
-async function exit(user){
+async function exit(user, rl){
     console.log("Bye, " + user.name+ ".");
     await new Promise(resolve => setTimeout(resolve, 3000));
-    console.clear();
+    rl.close();
+    console.clear();    
     main(user);
 }
         
 async function login(rl) {
-    const userIdInput = Number(await rl.question("Please enter ID: "));
-    const user = users.find(user => user.id === userIdInput);    
-            if(userIdInput == user.id){
-                let i = 3;
-                while(i>0){
-                    const userPinInput = Number(await rl.question("Enter your PIN ... "));
-                    if(user.pin == userPinInput){
-                        return user;
-                    }else 
-                        i--;
-                        console.log("Wrong Pin! You have " + i + " tries left.")
-                }
-            }else
-                console.log("Wrong ID or Pin!") 
-                await login(rl); 
-                return user;          
+    const users = JSON.parse(
+        fs.readFileSync("./User.json", "utf-8")
+    );
+    let userIdInput = Number(await rl.question("Please enter ID: "));
+    let user = users.find(user => user.id === userIdInput);
+    while(user == undefined){
+        console.log("Wrong ID or Pin!")
+        userIdInput = Number(await rl.question("Please enter ID: "));
+        user = users.find(user => user.id === userIdInput);
+    }
+    let i = 3;
+    while(i>0){
+        const userPinInput = Number(await rl.question("Enter your PIN .... "));
+        if(user.pin == userPinInput){
+            return user;
+        }else 
+            i--;
+            console.log("Wrong Pin! You have " + i + " tries left.")
+    }
+             
+}
 
-        }
-        
+async function register(rl){
+    const jsonUsers = JSON.parse(
+        fs.readFileSync("./User.json", "utf-8")
+    );
+    let id = 100000;
+    let user = null;
+    do{
+       id += 1;
+       user = users.find(user => user.id === id);
+       }while(user != undefined);
+    const name = await rl.question("Please enter your name: ");
+    const pin = pinGen();
+    const balance = 10;
+    const newuser = new User(id, name, pin, balance);
+    jsonUsers.push(newuser);
+    fs.writeFileSync(
+        "./User.json",
+        JSON.stringify(jsonUsers, null, 2)
+    );
+    console.clear();
+    return newuser;
+}
+
+function pinGen(){
+    let newpin = Math.floor(Math.random()*9999) + 1000;
+    let user = users.find(user => user.pin === newpin);
+    if (user == undefined){
+        return newpin;
+    }else pinGen();
+}
+      
 function atmBalance(){
     const JsonData = JSON.parse(fs.readFileSync("./ATM.json", "utf-8"));
     return JsonData.balance;
@@ -86,7 +117,17 @@ function atmBalance(){
 async function main(user) {
     const rl = readline.createInterface({ input, output });
     console.log("Welcome");
-    user = await login(rl);
+    let answer = null; 
+    do {
+        answer = await rl.question("Choose: login or register: ");
+           if (answer !== "login" && answer !== "register") {
+            console.log("Wrong input!");
+            }
+    }while (answer !== "login" && answer !== "register");
+        if(answer == "login"){
+            user = await login(rl);
+        }else
+            user = await register(rl);
     console.log("Hello, " + user.name + ".");
     console.log("Your balance is: " + user.balance + "$");
 
