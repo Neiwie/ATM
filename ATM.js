@@ -17,7 +17,7 @@ async function UseATM(user, rl) {
         case "exit": 
             exit(user, rl);
             break;
-        default: 
+        default:
             console.log("This is not an option!");
             await UseATM(user, rl);
             }
@@ -26,8 +26,12 @@ async function UseATM(user, rl) {
 async function withdraw(user, rl){
     const amount = Number( await rl.question("How much do you want to withdraw (max. " + user.balance + "$): "));
     while (amount > user.balance || amount < 1  || amount > atmBalance()){
-        console.log("Not possible!");
-        return withdraw(user, rl);
+        if(amount > atmBalance()){
+            console.log("Error: The ATM has not enough exchange inside! (max: " + atmBalance() + "$).");
+            return deposite(user, rl);    
+        }else
+            console.log("Not possible!");
+            return withdraw(user, rl);
     }
     user.balance = user.balance - amount;
     console.log("Withdrew: " + amount + "$. Your new balance is: " + user.balance +"$");
@@ -37,7 +41,7 @@ async function withdraw(user, rl){
 
 async function deposite(user, rl){
     const amount = Number(await rl.question("How much do you want to deposite(max. 2000$): "))
-    while (amount >= 2000 || amount <= 1 || amount > atmBalance()){
+    while (amount >= 2000 || amount <= 1){
         console.log("Not possible!");
         return deposite(user, rl);
     }
